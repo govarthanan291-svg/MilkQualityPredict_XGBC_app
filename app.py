@@ -2,121 +2,114 @@ import streamlit as st
 import numpy as np
 import joblib
 
-# -------------------------------
-# Load Model
-# -------------------------------
-@st.cache_resource
-def load_model():
-    bundle = joblib.load("milk_quality_xgb.pkl")
-    return bundle["model"], bundle["scaler"]
-
-model, scaler = load_model()
-
-# -------------------------------
-# Page Config
-# -------------------------------
+# -------------------------------------------------
+# Page Config (MUST BE FIRST)
+# -------------------------------------------------
 st.set_page_config(
     page_title="Milk Quality Prediction",
     page_icon="🥛",
     layout="centered"
 )
 
-# -------------------------------
+# -------------------------------------------------
+# Load Model
+# -------------------------------------------------
+@st.cache_resource
+def load_model():
+    model = joblib.load("milk_quality_xgb.pkl")
+    return model
+
+model = load_model()
+
+# -------------------------------------------------
 # Custom CSS
-# -------------------------------
+# -------------------------------------------------
 st.markdown("""
 <style>
 body {
-    background: linear-gradient(to right, #a1c4fd, #c2e9fb);
+    background-color: #E3F2FD;
 }
 .main {
-    background: linear-gradient(to right, #a1c4fd, #c2e9fb);
+    background-color: #E3F2FD;
 }
 .title {
     text-align:center;
-    font-size:42px;
+    font-size:38px;
     font-weight:bold;
-    color:#0b2545;
+    color:#0D47A1;
 }
 .subtitle {
     text-align:center;
     font-size:18px;
-    color:#1f4e79;
+    color:#1565C0;
 }
-.card {
+.box {
     background:white;
-    padding:30px;
-    border-radius:18px;
-    box-shadow:0px 0px 15px rgba(0,0,0,0.2);
+    padding:25px;
+    border-radius:15px;
+    box-shadow:0px 0px 10px gray;
 }
 .stButton>button {
-    background: linear-gradient(to right, #ff512f, #dd2476);
+    background-color:#1976D2;
     color:white;
-    height:55px;
+    border-radius:10px;
+    height:50px;
     width:100%;
     font-size:18px;
-    border-radius:12px;
-    border:none;
 }
 .stButton>button:hover {
-    background: linear-gradient(to right, #24c6dc, #514a9d);
-}
-.footer {
-    text-align:center;
-    color:#0b2545;
-}
-.range {
-    color:#555;
-    font-size:13px;
+    background-color:#0D47A1;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------
+# -------------------------------------------------
 # Title
-# -------------------------------
+# -------------------------------------------------
 st.markdown("<div class='title'>🥛 Milk Quality Prediction</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>XGBoost Machine Learning Model</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Using XGBoost Machine Learning Model</div>", unsafe_allow_html=True)
 
-# -------------------------------
-# Input Card
-# -------------------------------
-with st.container():
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
+# -------------------------------------------------
+# Input Fields
+# -------------------------------------------------
+st.markdown("<div class='box'>", unsafe_allow_html=True)
 
-    st.markdown("**pH Level**  <span class='range'>(Min: 0  |  Max: 14)</span>", unsafe_allow_html=True)
-    ph = st.slider("", 0.0, 14.0, 6.5)
+ph = st.number_input("pH Level (0 - 14)", min_value=0.0, max_value=14.0, value=6.5)
+temperature = st.number_input("Temperature (0 - 100)", min_value=0.0, max_value=100.0, value=25.0)
+taste = st.selectbox("Taste", ["Good", "Bad"])
+odor = st.selectbox("Odor", ["Good", "Bad"])
+fat = st.selectbox("Fat Content", ["Optimal", "Not Optimal"])
+turbidity = st.selectbox("Turbidity", ["High", "Low"])
+colour = st.number_input("Colour Value (0 - 255)", min_value=0, max_value=255, value=150)
 
-    st.markdown("**Temperature (°C)**  <span class='range'>(Min: 0  |  Max: 100)</span>", unsafe_allow_html=True)
-    temperature = st.slider("", 0.0, 100.0, 25.0)
+st.markdown("</div>", unsafe_allow_html=True)
 
-    taste = st.selectbox("Taste", [0,1], format_func=lambda x: "Good" if x==1 else "Bad")
-    odor = st.selectbox("Odor", [0,1], format_func=lambda x: "Good" if x==1 else "Bad")
-    fat = st.selectbox("Fat", [0,1], format_func=lambda x: "Optimal" if x==1 else "Not Optimal")
-    turbidity = st.selectbox("Turbidity", [0,1], format_func=lambda x: "High" if x==1 else "Low")
+# -------------------------------------------------
+# Convert Inputs
+# -------------------------------------------------
+taste = 1 if taste == "Good" else 0
+odor = 1 if odor == "Good" else 0
+fat = 1 if fat == "Optimal" else 0
+turbidity = 1 if turbidity == "High" else 0
 
-    st.markdown("**Colour Value**  <span class='range'>(Min: 0  |  Max: 255)</span>", unsafe_allow_html=True)
-    colour = st.slider("", 0, 255, 200)
+input_data = np.array([[ph, temperature, taste, odor, fat, turbidity, colour]])
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# -------------------------------
+# -------------------------------------------------
 # Prediction
-# -------------------------------
+# -------------------------------------------------
 if st.button("🔍 Predict Milk Quality"):
-    input_data = np.array([[ph, temperature, taste, odor, fat, turbidity, colour]])
-    scaled_data = scaler.transform(input_data)
-    prediction = model.predict(scaled_data)[0]
 
-    if prediction == 2:
-        st.success("🥇 HIGH QUALITY MILK")
+    prediction = model.predict(input_data)[0]
+
+    if prediction == 0:
+        st.error("🥛 Milk Quality: LOW")
     elif prediction == 1:
-        st.warning("🥈 MEDIUM QUALITY MILK")
+        st.warning("🥛 Milk Quality: MEDIUM")
     else:
-        st.error("🥉 LOW QUALITY MILK")
+        st.success("🥛 Milk Quality: HIGH")
 
-# -------------------------------
+# -------------------------------------------------
 # Footer
-# -------------------------------
+# -------------------------------------------------
 st.markdown("---")
-st.markdown("<div class='footer'>Developed by Govarthanan | XGBoost Project</div>", unsafe_allow_html=True)
+st.markdown("Developed by Govarthanan | XGBoost Milk Quality Project")
